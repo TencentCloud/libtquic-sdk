@@ -2,6 +2,8 @@
 
 腾讯sTGW-TQUIC团队研发跨平台通用基于C++的QUIC库
 
+![image](https://github.com/TencentCloud/libtquic-sdk/blob/main/doc/image/tquic_arch.png)
+
 
 #### 支持版本
 Q043,Q046,Q050,draft-25,draft-27
