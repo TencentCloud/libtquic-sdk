@@ -1,6 +1,6 @@
 # libtquic-sdk
 
-腾讯sTGW-TQUIC团队研发跨平台通用QUIC网络库
+跨平台通用QUIC网络库
 
 ![image](https://github.com/TencentCloud/libtquic-sdk/blob/main/doc/image/tquic_arch.png)
 
