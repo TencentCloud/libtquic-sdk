@@ -101,7 +101,7 @@ class DemoDelegate : public TnetRequestDelegate {
 
 
 int main() {
-  string host = "quic.yundong.qq.com";
+  string host = "www.example.com";
   int port = 443;
 
   // 设置日志打印到文件,默认输出到标准输出,可以不调用

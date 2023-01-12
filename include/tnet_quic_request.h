@@ -24,6 +24,8 @@
 #endif
 
 #include <cstdint>
+//#include <vector>
+//#include "net/third_party/quiche/src/quic/platform/api/quic_socket_address.h"
 
 namespace stgw {
 class TnetRequestFront;
@@ -34,6 +36,7 @@ struct TnetStats {
   bool is_quic;         // if it is quic, else it is tcp.
   bool is_0rtt;         // Only valid if it is quic.
   bool is_conn_reuse;   // if reuse an exist quic connection.
+  bool is_multipath_;
   std::uint64_t connect_ms;  // connect cost in millionseconds.
   std::uint64_t ttfb_ms;     // first byte cost from send request in millionseconds.
 
@@ -48,21 +51,35 @@ struct TnetStats {
   std::uint64_t packets_lost;  // Number of packets be lost when sent data.
   std::uint64_t packets_received; // Total packets received
   std::uint64_t bytes_received;  // Total bytes received including packet format.
-  std::uint64_t stream_bytes_received;  // Total bytes received including duplicated data.
+  std::uint64_t stream_bytes_sent;  // Non-retransmitted bytes sent in a stream frame.
+  std::uint64_t stream_bytes_received;  // Bytes received in a stream frame.
   std::uint64_t dns_ms;
-  std::uint64_t cancel_duration_ms;
-  std::uint64_t shlo_duration_ms;
-  std::uint64_t preprocess_duration_ms;
+  std::uint32_t cancel_duration_ms;
+  std::uint32_t shlo_duration_ms;
+  std::uint32_t preprocess_duration_ms;
+  std::uint32_t mp_nego_ms;
+  std::uint32_t mp_succ_ms;
+  std::uint32_t ma_st_rcv;
+  std::uint32_t mp_st_rcv;
+  std::uint32_t pre_strcv1;
+  std::uint32_t pre_strcv2;
+  std::int32_t mp_ft_offset;
+  std::int32_t mp_tot_ms;
+  int stream_error;
   int  dns_code;
+  int error_code;
   bool is_default_ip;
   char remote_ip[64];
-  char conn_id[32];
+  char conn_id[64];
   int engine_type;  // only used if ConnectAndSend
   int sock_bind_type; // only used if ConnectAndSend
   int migration_count;
   int sock_avail_type;
   int multi_request_type;
   int avail_request_type;
+  int detect_result;
+  int persist_result;
+  char detect_str[16];
 };
 
 enum CongestionType {
@@ -83,6 +100,7 @@ class TNET_EXPORT TnetConfig {
  public: 
   TnetConfig();
   TnetConfig(const TnetConfig& c);
+  ~TnetConfig();
   // The max receive window for a whole session.
   // unit is bytes, default is 15 MB, max is 24 MB
   // The window size of session must be larger than
@@ -122,7 +140,7 @@ class TNET_EXPORT TnetConfig {
   // 4000 milliseconds defaultly before handshake complete.
   // 600 seconds defaultly after handshake.
   int idle_timeout_millisec_;
-  // Specify quic version, only support quic 39-46, it is 43 defaultly.
+  // Specify quic version, only support quic 43-80, it is 43 defaultly.
   int quic_version_;
 
   // default is false.
@@ -131,8 +149,22 @@ class TNET_EXPORT TnetConfig {
   // default is false.
   bool force_zero_rtt_;
 
+  // ConnectWithDomain get ipv6 ip if true, false defaultly.
+  bool support_v6_;
+
+  bool isCongetionOptimizationEnabled_;
+
   bool debug_use_1rtt_;
+  int mp_strategy_;
+  // The following parameters with debug_* is used for testing.
+  // number of active connection id provided by client. if not set, default is 8.
+  int debug_active_connection_id_num_;
+  // number of path when multipath is enable. if not set, dafault is 2.
+  int debug_multipath_num_;
+  // Client IP address bind to each path, when multipath is enable.
+  //std::vector<quic::QuicSocketAddress> debug_client_addresses_;
 };
+
 
 class TNET_EXPORT TnetRequestDelegate {
  public:
@@ -140,6 +172,8 @@ class TNET_EXPORT TnetRequestDelegate {
   virtual ~TnetRequestDelegate() {}
   // Called when the handshake with server compeleted.
   virtual void OnConnect(int error_code) = 0;
+  // Represents that network is linkable.
+  virtual void OnNetworkLinked() {}
   // Called when data is available.
   virtual void OnDataRecv(const char* buf,
                           const int buf_len) = 0;
@@ -192,7 +226,8 @@ class TNET_EXPORT TnetQuicRequest {
      Other headers can set as usual format.
   */
   void AddHeaders(const char* key,
-                  const char* value);
+                  const char* value,
+                  const bool is_covered = true);
   // Return true if the handshake with server is compeleted.
   bool IsConnected();
 
@@ -210,6 +245,8 @@ class TNET_EXPORT TnetQuicRequest {
 
   // Get statistics for the last request.
   TnetStats GetTnetStates();
+
+  void SetAlpn(const char* alpn_);
 
  private:
   TnetQuicRequest();
@@ -231,14 +268,16 @@ TNET_EXPORT void SetTquicLog(const wchar_t* filepath, bool delete_old_file);
 TNET_EXPORT void SetTquicLog(const char* filepath, bool delete_old_file);
 #endif
 
-// Get tquic-sdk version, should be 1.3.9.2
+// Get tquic-sdk version, should be 1.4.21
 TNET_EXPORT const char* GetTquicVersion();
 
 // only for quic
 TNET_EXPORT void TquicPreconnect(const char* domain,
                                  const char* default_ip,
-                                 const int port,
-                                 const char* dev_model);
+                                 const int port);
+
+// For splash ad experiment
+TNET_EXPORT void set_tquic_expid(int exp_id);
 
 #ifdef __cplusplus
 }
