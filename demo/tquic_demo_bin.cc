@@ -102,6 +102,7 @@ class DemoDelegate : public TnetRequestDelegate {
 
 int main() {
   string host = "www.example.com";
+  string vip = "10.0.0.1";
   int port = 443;
 
   // 设置日志打印到文件,默认输出到标准输出,可以不调用
@@ -124,14 +125,20 @@ int main() {
   // 开启连接复用，默认就是true
   config.use_session_reuse_ = true;
 
+  // 是否使用QUIC传输私有协议，为true代表传输私有协议
+  // 默认为false即使用h2/h3
+  config.is_custom_ = false;
+
 
   DemoDelegate* demo_delegate_ = new DemoDelegate();
 
   // new一个quic对象，进行连接和请求
   TnetQuicRequest* request_ = new TnetQuicRequest(demo_delegate_, config);
 
-  // 发起QUIC连接，底层会进行域名解析
-  request_->ConnectWithDomain(host.c_str(), port);
+  // 针对VIP发起QUIC直连，host仅用于握手，不用于域名解析
+  request_->Connect(host.c_str(), vip.c_str(), port, 80);
+  // eg. 另外一种连接接口：通过域名发起QUIC连接，底层会进行DNS解析
+  // request_->ConnectWithDomain(host.c_str(), port);
 
   unique_lock<mutex> lk(s_lock);
   // 业务线程阻塞，等待被唤醒
@@ -149,9 +156,11 @@ int main() {
   // 如果带body，底层默认是POST，如果不带body，底层默认是GET
   // 不需要设置Content-length，底层会默认加上
   string body = "abcd";
+  // 如果is_custom_ == true, 则只传输body内容（私有协议不包含头部）
+  // 默认使用h2/h3（未设置is_custom_或is_custom_==false）
+  // body非空则为POST请求，否则为GET请求
   request_->SendRequest("abcd", body.length(), true);
-  // 这种是发GET请求
-  // request_->SendRequest("", 0, true);
+  // eg.发GET请求：request_->SendRequest("", 0, true);
 
   // 业务线程阻塞，等待被唤醒
   s_cv.wait(lk);
