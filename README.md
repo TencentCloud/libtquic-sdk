@@ -1,4 +1,4 @@
-# 项目已重构，本仓库不再维护，请异步最新仓库：https://github.com/Tencent/tquic
+# 项目已重构，本仓库不再维护，请移步最新仓库：https://github.com/Tencent/tquic
 
 # libtquic-sdk
 
